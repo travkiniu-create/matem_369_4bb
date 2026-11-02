@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Тренажёр</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  html, body { touch-action: manipulation; overscroll-behavior: none; }
+  body {
+    font-family: 'Rubik', Arial, sans-serif;
+    background: #ffe14d;
+    background-image:
+      radial-gradient(circle at 20% 30%, #ff8c42 0%, transparent 25%),
+      radial-gradient(circle at 80% 70%, #4ecdc4 0%, transparent 25%),
+      radial-gradient(circle at 90% 20%, #ff5e78 0%, transparent 20%),
+      radial-gradient(circle at 10% 80%, #8e7cff 0%, transparent 25%);
+    min-height: 100vh;
+    display: flex; justify-content: center; align-items: center;
+    padding: 12px;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .card {
+    background: #fffbe8; border: 5px solid #000; border-radius: 18px;
+    padding: 16px 16px 18px; box-shadow: 8px 8px 0 #000;
+    width: 100%; max-width: 440px; position: relative;
+  }
+
+  .rewards-bar { display: flex; justify-content: center; gap: 6px; margin-bottom: 14px; min-height: 44px; flex-wrap: wrap; }
+  .reward-slot {
+    width: 40px; height: 40px; border: 3px solid #000; border-radius: 10px;
+    background: #f0f0f5; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: 2px 2px 0 #000; opacity: 0.35; transition: all .3s;
+  }
+  .reward-slot.earned { opacity: 1; background: #fff8b0; transform: scale(1.05); }
+  .reward-slot.current { border-color: #ff3366; animation: rewardPulse 1.2s infinite; }
+  @keyframes rewardPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+
+  .goose-popup {
+    position: fixed; top: -260px; left: 50%; transform: translateX(-50%);
+    z-index: 200; background: #fff; border: 5px solid #000; border-radius: 20px;
+    padding: 20px 24px; box-shadow: 8px 8px 0 #000; text-align: center;
+    max-width: 320px; width: 90%;
+    transition: top .5s cubic-bezier(.68,-0.55,.27,1.55);
+    pointer-events: none;
+  }
+  .goose-popup.show { top: 20px; pointer-events: auto; }
+  .goose-emoji { font-size: 80px; line-height: 1; display: block; animation: gooseWiggle 0.6s ease-in-out infinite; margin-bottom: 6px; }
+  @keyframes gooseWiggle { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+  .goose-rank { font-weight: 900; font-size: 20px; color: #ff3366; margin-bottom: 4px; }
+  .goose-message { font-weight: 700; font-size: 15px; color: #333; margin-bottom: 10px; }
+  .goose-btn {
+    background: #22c55e; color: #fff; border: 3px solid #000; border-radius: 10px;
+    box-shadow: 3px 3px 0 #000; padding: 10px 20px; font-weight: 900; font-size: 15px;
+    cursor: pointer; pointer-events: auto;
+  }
+  .goose-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+
+  .stats { display: flex; gap: 8px; margin-bottom: 14px; }
+  .stat {
+    flex: 1; background: #fff; border: 3px solid #000; border-radius: 12px;
+    padding: 6px 4px; text-align: center; box-shadow: 3px 3px 0 #000;
+    font-weight: 700; font-size: 11px; color: #333; line-height: 1.2;
+  }
+  .stat b { display: block; font-weight: 900; font-size: 22px; color: #ff3366; margin-top: 2px; }
+
+  .example-bubble {
+    background: #fff; border: 4px solid #000; border-radius: 20px;
+    padding: 18px 10px; margin-bottom: 10px; position: relative;
+    box-shadow: 4px 4px 0 #000; min-height: 100px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background .15s;
+  }
+  .example-bubble:active { background: #f4f0ff; }
+  .example-bubble::after {
+    content: ''; position: absolute; bottom: -16px; left: 30px;
+    border: 12px solid transparent; border-top-color: #000; border-bottom: 0;
+  }
+  .example-bubble::before {
+    content: ''; position: absolute; bottom: -9px; left: 34px;
+    border: 8px solid transparent; border-top-color: #fff; border-bottom: 0; z-index: 1;
+  }
+  .example {
+    font-weight: 900; font-size: 38px; color: #111; letter-spacing: 1px;
+    line-height: 1; display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;
+  }
+  .example .op { color: #ff3366; }
+  .example .star { color: #8e7cff; font-size: 46px; animation: blink 1.2s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .answer-slot {
+    display: inline-block; min-width: 50px; color: #111;
+    border-bottom: 3px dashed #aaa; text-align: center; padding: 0 4px;
+  }
+  .answer-slot.filled  { color: #1e88e5; border-bottom-color: #1e88e5; }
+  .answer-slot.correct { color: #22c55e; border-bottom-color: #22c55e; }
+  .answer-slot.wrong   { color: #ef4444; border-bottom-color: #ef4444; }
+
+  .hint { font-weight: 600; font-size: 12px; color: #d90429; text-align: center; min-height: 16px; margin-bottom: 6px; }
+  .feedback { font-weight: 900; font-size: 20px; text-align: center; height: 26px; margin-bottom: 8px; }
+  .feedback.correct { color: #22c55e; }
+  .feedback.wrong   { color: #ef4444; }
+  .feedback.info    { color: #3b82f6; }
+
+  .keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
+  .key {
+    background: #fff; border: 3px solid #000; border-radius: 12px;
+    box-shadow: 3px 3px 0 #000; padding: 14px 0;
+    font-weight: 800; font-size: 24px; color: #111;
+    cursor: pointer; transition: transform .08s;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1; text-align: center; min-height: 54px;
+  }
+  .key:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  .key.digit { background: #e0f2fe; }
+  .key.icon { padding: 6px 0; }
+  .key.icon svg { width: 34px; height: 34px; image-rendering: pixelated; shape-rendering: crispEdges; }
+  .key.back   { background: #fde68a; }
+  .key.repeat { background: #4ecdc4; }
+  .key.mic    { background: #ff8c42; }
+  .key.settings { background: #8e7cff; }
+  .key.mic.listening { background: #ef4444; animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  .key.zero { grid-column: 1 / 4; background: #e0f2fe; }
+  .key.ok { grid-column: 1 / -1; background: #22c55e; color: #fff; font-size: 28px; padding: 18px 0; margin-top: 2px; letter-spacing: 3px; }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; z-index: 100; justify-content: center; align-items: flex-end;
+  }
+  .overlay.open { display: flex; }
+  .settings-panel {
+    background: #fffbe8; border: 5px solid #000; border-radius: 22px 22px 0 0;
+    box-shadow: 0 -6px 0 #000; width: 100%; max-width: 440px;
+    max-height: 88vh; overflow-y: auto; padding: 18px 16px 28px;
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .settings-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; font-weight: 900; font-size: 22px; color: #ff3366;
+  }
+  .close-btn {
+    background: #ef4444; border: 3px solid #000; border-radius: 50%;
+    width: 40px; height: 40px; font-size: 20px; color: #fff;
+    cursor: pointer; box-shadow: 2px 2px 0 #000; font-weight: 900;
+  }
+  .settings-section { margin-bottom: 18px; }
+  .settings-label {
+    font-weight: 800; font-size: 13px; color: #333;
+    margin-bottom: 8px; display: block; text-transform: uppercase;
+  }
+  .toggle-list { display: flex; flex-direction: column; gap: 8px; }
+  .toggle-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; background: #fff; border: 3px solid #000; border-radius: 12px;
+    box-shadow: 2px 2px 0 #000; padding: 10px 12px; cursor: pointer;
+    font-weight: 700; font-size: 14px; color: #333;
+    user-select: none; transition: background .1s;
+  }
+  .toggle-item:active { background: #f4f0ff; }
+  .toggle-text { display: flex; flex-direction: column; gap: 2px; text-align: left; flex: 1; }
+  .toggle-text small { font-size: 11px; font-weight: 500; color: #888; }
+  .toggle-switch {
+    flex: 0 0 auto; width: 52px; height: 30px; background: #d0d5e8;
+    border: 3px solid #000; border-radius: 16px; position: relative; transition: background .2s;
+  }
+  .toggle-switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; background: #fff; border: 2px solid #000;
+    border-radius: 50%; transition: transform .2s;
+  }
+  .toggle-item.active .toggle-switch { background: #22c55e; }
+  .toggle-item.active .toggle-switch::after { transform: translateX(22px); }
+  .toggle-item input { display: none; }
+
+  .tables { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .table-btn {
+    background: #fff; border: 3px solid #000; border-radius: 10px;
+    box-shadow: 2px 2px 0 #000; padding: 8px 0;
+    font-weight: 800; font-size: 15px; cursor: pointer; color: #333;
+  }
+  .table-btn.active { background: #4ecdc4; color: #fff; box-shadow: 2px 2px 0 #000, inset 0 0 0 2px #fff; }
+
+  .reset-btn {
+    width: 100%; background: #ef4444; color: #fff; border: 3px solid #000;
+    border-radius: 10px; box-shadow: 3px 3px 0 #000; padding: 12px;
+    font-weight: 800; font-size: 16px; cursor: pointer; margin-top: 8px;
+  }
+  .reset-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+
+  .no-support {
+    background: #ffe8e8; color: #c0392b; border: 3px solid #000;
+    border-radius: 10px; padding: 8px; font-size: 12px; font-weight: 700;
+    margin-bottom: 10px; display: none; box-shadow: 2px 2px 0 #000;
+  }
+</style>
+</head>
+<body>
+
+<div class="goose-popup" id="goosePopup">
+  <span class="goose-emoji" id="gooseEmoji">🦢</span>
+  <div class="goose-rank" id="gooseRank">Гусь-новичок</div>
+  <div class="goose-message" id="gooseMessage">10 подряд! Молодец!</div>
+  <button class="goose-btn" id="gooseBtn">ПРОДОЛЖИТЬ</button>
+</div>
+
+<div class="card">
+  <div class="no-support" id="noSupport">⚠️ Нет доступа к микрофону. Открой в Chrome или Safari.</div>
+
+  <div class="rewards-bar" id="rewardsBar"></div>
+
+  <div class="stats">
+    <div class="stat">ВЕРНО<b id="correctCount">0</b></div>
+    <div class="stat">ОШИБКИ<b id="wrongCount">0</b></div>
+    <div class="stat">ПОДРЯД<b id="streakCount">0</b></div>
+  </div>
+
+  <div class="example-bubble" id="exampleBubble">
+    <div class="example" id="example">* * *</div>
+  </div>
+  <div class="hint" id="hint"></div>
+  <div class="feedback" id="feedback"></div>
+
+  <div class="keypad" id="keypad">
+    <button class="key digit" data-key="7">7</button>
+    <button class="key digit" data-key="8">8</button>
+    <button class="key digit" data-key="9">9</button>
+    <button class="key back icon" data-key="back" title="Удалить">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 2 L2 8 L4 14 L14 14 L14 2 Z" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="5" y="5" width="2" height="2" fill="#000"/>
+        <rect x="9" y="5" width="2" height="2" fill="#000"/>
+        <rect x="5" y="9" width="2" height="2" fill="#000"/>
+        <rect x="9" y="9" width="2" height="2" fill="#000"/>
+        <rect x="7" y="7" width="2" height="2" fill="#000"/>
+        <rect x="3" y="7" width="1" height="2" fill="#000"/>
+      </svg>
+    </button>
+
+    <button class="key digit" data-key="4">4</button>
+    <button class="key digit" data-key="5">5</button>
+    <button class="key digit" data-key="6">6</button>
+    <button class="key repeat icon" id="speakerBtn" title="Повторить">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="6" width="3" height="4" fill="#fff" stroke="#000" stroke-width="1"/>
+        <path d="M5 6 L9 3 L9 13 L5 10 Z" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="10" y="5" width="1" height="1" fill="#000"/>
+        <rect x="11" y="6" width="1" height="1" fill="#000"/>
+        <rect x="12" y="7" width="1" height="2" fill="#000"/>
+        <rect x="11" y="9" width="1" height="1" fill="#000"/>
+        <rect x="10" y="10" width="1" height="1" fill="#000"/>
+      </svg>
+    </button>
+
+    <button class="key digit" data-key="1">1</button>
+    <button class="key digit" data-key="2">2</button>
+    <button class="key digit" data-key="3">3</button>
+    <button class="key mic icon" id="micBtn" title="Микрофон">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="2" width="4" height="7" rx="2" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="7" y="3" width="2" height="5" fill="#000"/>
+        <rect x="5" y="8" width="1" height="2" fill="#000"/>
+        <rect x="10" y="8" width="1" height="2" fill="#000"/>
+        <rect x="6" y="10" width="4" height="1" fill="#000"/>
+        <rect x="7" y="11" width="2" height="2" fill="#000"/>
+        <rect x="6" y="13" width="4" height="1" fill="#000"/>
+      </svg>
+    </button>
+
+    <button class="key zero" data-key="0">0</button>
+    <button class="key settings icon" id="settingsBtn" title="Настройки">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <rect x="7" y="1" width="2" height="3" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="7" y="12" width="2" height="3" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="1" y="7" width="3" height="2" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="12" y="7" width="3" height="2" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="3" y="3" width="2" height="2" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="11" y="3" width="2" height="2" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="3" y="11" width="2" height="2" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="11" y="11" width="2" height="2" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="6" y="6" width="4" height="4" fill="#fff" stroke="#000" stroke-width="1"/>
+        <rect x="7" y="7" width="2" height="2" fill="#000"/>
+      </svg>
+    </button>
+
+    <button class="key ok" data-key="ok">OK</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>НАСТРОЙКИ</span>
+      <button class="close-btn" id="closeSettings">✕</button>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Режим</span>
+      <div class="toggle-list">
+        <div class="toggle-item active" data-mode="table">
+          <div class="toggle-text">📗 Таблица<small>4 × 2, 8 ÷ 4</small></div>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item" data-mode="oral">
+          <div class="toggle-text">🧠 Устный счёт<small>40 × 2, 800 ÷ 40</small></div>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item" data-mode="mix">
+          <div class="toggle-text">🎲 Всё вместе<small>Таблица + нули</small></div>
+          <div class="toggle-switch"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Таблица</span>
+      <div class="tables" id="tablesGrid"></div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Действия</span>
+      <div class="toggle-list">
+        <div class="toggle-item active" id="multToggle">
+          <div class="toggle-text">✖️ Умножение</div>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item active" id="divToggle">
+          <div class="toggle-text">➗ Деление</div>
+          <div class="toggle-switch"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Звук и голос</span>
+      <div class="toggle-list">
+        <div class="toggle-item active" id="voiceToggle">
+          <div class="toggle-text">🔊 Озвучивать примеры</div>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item" id="listenToggle">
+          <div class="toggle-text">🎤 Слушать всегда</div>
+          <div class="toggle-switch"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="reset-btn" id="resetBtn">СБРОСИТЬ СЧЁТ</button>
+  </div>
+</div>
+
+<script>
+  // ==== Элементы ====
+  const exampleEl = document.getElementById('example');
+  const exampleBubble = document.getElementById('exampleBubble');
+  const hintEl = document.getElementById('hint');
+  const feedbackEl = document.getElementById('feedback');
+  const speakerBtn = document.getElementById('speakerBtn');
+  const micBtn = document.getElementById('micBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const multToggle = document.getElementById('multToggle');
+  const divToggle = document.getElementById('divToggle');
+  const voiceToggle = document.getElementById('voiceToggle');
+  const listenToggle = document.getElementById('listenToggle');
+  const tablesGrid = document.getElementById('tablesGrid');
+  const noSupport = document.getElementById('noSupport');
+  const keypad = document.getElementById('keypad');
+  const overlay = document.getElementById('overlay');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const closeSettings = document.getElementById('closeSettings');
+
+  const correctCountEl = document.getElementById('correctCount');
+  const wrongCountEl = document.getElementById('wrongCount');
+  const streakCountEl = document.getElementById('streakCount');
+
+  const rewardsBar = document.getElementById('rewardsBar');
+  const goosePopup = document.getElementById('goosePopup');
+  const gooseEmoji = document.getElementById('gooseEmoji');
+  const gooseRank = document.getElementById('gooseRank');
+  const gooseMessage = document.getElementById('gooseMessage');
+  const gooseBtn = document.getElementById('gooseBtn');
+
+  // ==== Состояние ====
+  let correct = 0, wrong = 0, streak = 0;
+  let currentAnswer = null;
+  let currentText = '';
+  let answered = false;
+  let revealed = false;
+  let currentInput = '';
+
+  let selectedTable = 0;
+  let currentMode = 'table';
+  let multOn = true, divOn = true, voiceOn = true, listenOn = false;
+
+  let hideTimer = null;
+  let nextTimer = null;
+
+  const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  // ==== Запрет зума ====
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  // ==== Награды ====
+  // Заработанные награды НЕ сбрасываются при ошибке.
+  // Но для следующей награды нужно снова накопить серию без ошибок.
+  const GOOSE_LEVELS = [
+    { threshold: 10, emoji: '🦢', rank: 'Гусь-новичок' },
+    { threshold: 20, emoji: '🦆', rank: 'Гусь-умник' },
+    { threshold: 30, emoji: '🦅', rank: 'Гусь-мастер' },
+    { threshold: 40, emoji: '🦉', rank: 'Гусь-чемпион' },
+    { threshold: 50, emoji: '👑', rank: 'Гусь-легенда' }
+  ];
+  const MAX_REWARDS = 5;
+  // Сколько гусей уже заработано (не сбрасывается при ошибке)
+  let geeseEarned = 0;
+  // Серия правильных ответов с момента последней ошибки / награды
+  let streakSinceReward = 0;
+
+  function buildRewardsBar() {
+    rewardsBar.innerHTML = '';
+    for (let i = 0; i < MAX_REWARDS; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'reward-slot';
+      slot.id = 'rewardSlot' + i;
+      slot.textContent = '?';
+      rewardsBar.appendChild(slot);
+    }
+  }
+
+  function updateRewards() {
+    for (let i = 0; i < MAX_REWARDS; i++) {
+      const slot = document.getElementById('rewardSlot' + i);
+      if (!slot) continue;
+      slot.classList.remove('earned', 'current');
+      if (i < geeseEarned) {
+        slot.classList.add('earned');
+        slot.textContent = GOOSE_LEVELS[i].emoji;
+      } else if (i === geeseEarned && geeseEarned < MAX_REWARDS) {
+        slot.classList.add('current');
+        slot.textContent = '?';
+      } else {
+        slot.textContent = '?';
+      }
+    }
+  }
+
+  function showGoose(levelIndex, streakValue) {
+    const idx = Math.min(levelIndex, GOOSE_LEVELS.length - 1);
+    const level = GOOSE_LEVELS[idx];
+    gooseEmoji.textContent = level.emoji;
+    gooseRank.textContent = level.rank;
+    gooseMessage.textContent = `${streakValue} подряд! ${streakValue >= 50 ? 'Невероятно!' : 'Так держать!'}`;
+    goosePopup.classList.add('show');
+  }
+
+  function hideGoose() { goosePopup.classList.remove('show'); }
+  gooseBtn.addEventListener('click', hideGoose);
+
+  // ==== Озвучка ====
+  let voiceRu = null;
+
+  function loadVoices() {
+    const voices = speechSynthesis.getVoices();
+    voiceRu = voices.find(v => v.lang.startsWith('ru') && v.localService)
+           || voices.find(v => v.lang.startsWith('ru'))
+           || voices[0] || null;
+  }
+  if ('speechSynthesis' in window) {
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  function exampleToSpeech(text, includeAnswer) {
+    let spoken = text
+      .replace(/×/g, ' умножить на ')
+      .replace(/÷/g, ' разделить на ')
+      .replace(/\s+/g, ' ').trim();
+    if (includeAnswer) spoken += ' равно ' + currentAnswer;
+    return spoken + '.';
+  }
+
+  function speak(text) {
+    if (!voiceOn) return;
+    if (!('speechSynthesis' in window)) return;
+
+    speechSynthesis.cancel();
+
+    setTimeout(() => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ru-RU';
+      if (voiceRu) u.voice = voiceRu;
+      u.rate = 0.75;
+      u.pitch = 1.0;
+      u.volume = 1.0;
+
+      let watchdog = setTimeout(() => {
+        try { speechSynthesis.cancel(); } catch (e) {}
+      }, 12000);
+
+      u.onend = () => clearTimeout(watchdog);
+      u.onerror = () => clearTimeout(watchdog);
+
+      speechSynthesis.speak(u);
+      speechSynthesis.resume();
+    }, 80);
+  }
+
+  function speakExample() {
+    if (!currentText) return;
+    speak(exampleToSpeech(currentText, false));
+  }
+
+  // ==== Распознавание речи ====
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null, isListening = false;
+
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ru-RU';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
+
+    recognition.onstart = () => { isListening = true; micBtn.classList.add('listening'); };
+    recognition.onend = () => { isListening = false; micBtn.classList.remove('listening'); };
+    recognition.onerror = (e) => {
+      isListening = false;
+      micBtn.classList.remove('listening');
+      if (e.error === 'not-allowed') feedbackEl.textContent = '❌ Разреши микрофон';
+      else if (e.error === 'no-speech') feedbackEl.textContent = '🤫 Не услышал';
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      const number = parseSpokenNumber(transcript);
+      if (number === null) {
+        feedbackEl.textContent = `🗣 «${transcript}» — не понял`;
+        feedbackEl.className = 'feedback wrong';
+        return;
+      }
+      if (!revealed) revealExample();
+      setCurrentInput(String(number));
+      setTimeout(() => check(), 100);
+    };
+  } else {
+    noSupport.style.display = 'block';
+    micBtn.disabled = true;
+    micBtn.style.opacity = 0.4;
+  }
+
+  function startListening() {
+    if (!recognition || isListening || answered) return;
+    speechSynthesis.cancel();
+    try { recognition.start(); } catch (e) {}
+  }
+  function stopListening() {
+    if (recognition && isListening) recognition.stop();
+  }
+  micBtn.addEventListener('click', () => {
+    if (isListening) stopListening();
+    else startListening();
+  });
+
+  // ==== Речь → число ====
+  const units = {'ноль':0,'нуль':0,'один':1,'одна':1,'одно':1,'два':2,'две':2,'три':3,'четыре':4,'пять':5,'шесть':6,'семь':7,'восемь':8,'девять':9,'десять':10,'одиннадцать':11,'двенадцать':12,'тринадцать':13,'четырнадцать':14,'пятнадцать':15,'шестнадцать':16,'семнадцать':17,'восемнадцать':18,'девятнадцать':19};
+  const tens = {'двадцать':20,'тридцать':30,'сорок':40,'пятьдесят':50,'шестьдесят':60,'семьдесят':70,'восемьдесят':80,'девяносто':90};
+  const hundreds = {'сто':100,'двести':200,'триста':300,'четыреста':400,'пятьсот':500,'шестьсот':600,'семьсот':700,'восемьсот':800,'девятьсот':900};
+  const scales = {'тысяча':1000,'тысячи':1000,'тысяч':1000};
+
+  function wordsToNumber(words) {
+    let total = 0, current = 0;
+    for (const w of words) {
+      if (units[w] !== undefined) current += units[w];
+      else if (tens[w] !== undefined) current += tens[w];
+      else if (hundreds[w] !== undefined) current += hundreds[w];
+      else if (scales[w] !== undefined) { total += current * scales[w]; current = 0; }
+    }
+    return total + current;
+  }
+  function parseSpokenNumber(text) {
+    const cleaned = text.toLowerCase().replace(/[^а-яё0-9\s]/gi, ' ').replace(/\s+/g, ' ').trim();
+    const digits = cleaned.match(/\d+/);
+    if (digits) return parseInt(digits[0], 10);
+    const words = cleaned.split(' ');
+    const numberWords = words.filter(w => units[w] !== undefined || tens[w] !== undefined || hundreds[w] !== undefined || scales[w] !== undefined);
+    if (numberWords.length === 0) return null;
+    return wordsToNumber(numberWords);
+  }
+
+  // ==== Отрисовка ====
+  function renderExample() {
+    if (!currentText || !revealed) {
+      exampleEl.innerHTML = '<span class="star">*</span> <span class="star">*</span> <span class="star">*</span>';
+      return;
+    }
+    const inputClass = answered
+      ? (Number(currentInput) === currentAnswer ? 'correct' : 'wrong')
+      : (currentInput ? 'filled' : '');
+    const display = currentInput || '?';
+    const examplePart = currentText.replace(/[×÷]/, m => `<span class="op">${m}</span>`);
+    exampleEl.innerHTML = `${examplePart} = <span class="answer-slot ${inputClass}">${display}</span>`;
+  }
+
+  function revealExample() {
+    if (!currentText || revealed) return;
+    revealed = true;
+    renderExample();
+  }
+
+  function hideExample() {
+    revealed = false;
+    renderExample();
+  }
+
+  function setCurrentInput(val) {
+    currentInput = val;
+    renderExample();
+  }
+
+  exampleBubble.addEventListener('click', () => {
+    if (!currentText) return;
+    if (revealed) hideExample();
+    else revealExample();
+  });
+
+  keypad.addEventListener('click', (e) => {
+    const btn = e.target.closest('.key');
+    if (!btn || btn.disabled) return;
+    const k = btn.dataset.key;
+    if (!k) return;
+    if (answered) return;
+
+    if (!revealed) revealExample();
+
+    if (k === 'ok') { check(); return; }
+    if (k === 'back') {
+      setCurrentInput(currentInput.slice(0, -1));
+      return;
+    }
+    if (currentInput.length < 6) {
+      let newVal = currentInput + k;
+      if (newVal.length > 1 && newVal[0] === '0') newVal = newVal.replace(/^0+/, '') || '0';
+      setCurrentInput(newVal);
+    }
+  });
+
+  // ==== Тумблеры ====
+  function toggleItem(el, onChange) {
+    el.addEventListener('click', () => {
+      el.classList.toggle('active');
+      if (onChange) onChange(el.classList.contains('active'));
+    });
+  }
+
+  document.querySelectorAll('.toggle-item[data-mode]').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-item[data-mode]').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      currentMode = item.dataset.mode;
+      newExample();
+    });
+  });
+
+  toggleItem(multToggle, v => { multOn = v; newExample(); });
+  toggleItem(divToggle,  v => { divOn = v;  newExample(); });
+  toggleItem(voiceToggle, v => {
+    voiceOn = v;
+    if (!v) speechSynthesis.cancel();
+    else speakExample();
+  });
+  toggleItem(listenToggle, v => {
+    listenOn = v;
+    if (v && !answered) startListening();
+    else stopListening();
+  });
+
+  // ==== Генераторы ====
+  function buildTableButtons() {
+    const values = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const labels = ['Все', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    tablesGrid.innerHTML = '';
+    labels.forEach((label, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'table-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = label;
+      btn.dataset.value = values[i];
+      btn.addEventListener('click', () => {
+        selectedTable = values[i];
+        document.querySelectorAll('.table-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        newExample();
+      });
+      tablesGrid.appendChild(btn);
+    });
+  }
+
+  function pickTablePair() {
+    const a = (selectedTable === 0) ? rand(2, 9) : selectedTable;
+    const b = rand(2, 9);
+    return { a, b, product: a * b };
+  }
+
+  function genTable() {
+    const isMult = multOn && divOn ? Math.random() < 0.5 : multOn;
+    const { a, b, product } = pickTablePair();
+    if (isMult) return { text: `${a} × ${b}`, answer: product };
+    return { text: `${product} ÷ ${a}`, answer: b };
+  }
+
+  function genOral() {
+    const isMult = multOn && divOn ? Math.random() < 0.5 : multOn;
+    const { a, b, product } = pickTablePair();
+
+    if (isMult) {
+      const type = pick(['a10_b', 'a_b10', 'a100_b', 'a_b100', 'a10_b10']);
+      let x, y, zeros;
+      if (type === 'a10_b')        { x = a*10;  y = b;     zeros = 1; }
+      else if (type === 'a_b10')   { x = a;     y = b*10;  zeros = 1; }
+      else if (type === 'a100_b')  { x = a*100; y = b;     zeros = 2; }
+      else if (type === 'a_b100')  { x = a;     y = b*100; zeros = 2; }
+      else                         { x = a*10;  y = b*10;  zeros = 2; }
+      const answer = product * Math.pow(10, zeros);
+      if (answer > 800) return { text: `${a*10} × ${b}`, answer: a*10*b };
+      return { text: `${x} × ${y}`, answer };
+    } else {
+      const variants = [];
+      if (product * 10 <= 800) variants.push({ dividend: product*10, divisor: a, answer: b*10 });
+      if (product * 10 <= 800) variants.push({ dividend: product*10, divisor: a*10, answer: b });
+      if (product * 100 <= 800) variants.push({ dividend: product*100, divisor: a, answer: b*100 });
+      if (product * 100 <= 800) variants.push({ dividend: product*100, divisor: a*10, answer: b*10 });
+      if (product * 100 <= 800) variants.push({ dividend: product*100, divisor: a*100, answer: b });
+      if (product * 10 <= 800) variants.push({ dividend: product*10, divisor: b, answer: a*10 });
+      if (product * 100 <= 800) variants.push({ dividend: product*100, divisor: b, answer: a*100 });
+      if (variants.length === 0) return { text: `${product} ÷ ${a}`, answer: b };
+      const v = pick(variants);
+      return { text: `${v.dividend} ÷ ${v.divisor}`, answer: v.answer };
+    }
+  }
+
+  function newExample() {
+    clearTimeout(hideTimer);
+    clearTimeout(nextTimer);
+    answered = false;
+    revealed = false;
+    hintEl.textContent = '';
+    currentInput = '';
+
+    if (!multOn && !divOn) {
+      currentText = '';
+      currentAnswer = null;
+      exampleEl.textContent = '— —';
+      return;
+    }
+
+    let ex;
+    if (currentMode === 'table') ex = genTable();
+    else if (currentMode === 'oral') ex = genOral();
+    else ex = Math.random() < 0.5 ? genTable() : genOral();
+
+    currentAnswer = ex.answer;
+    currentText = ex.text;
+    renderExample();
+
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'feedback';
+
+    speakExample();
+
+    if (listenOn) setTimeout(() => startListening(), 1400);
+  }
+
+  function check() {
+    if (currentAnswer === null || answered) return;
+    if (currentInput === '') return;
+    if (!revealed) revealExample();
+
+    answered = true;
+    stopListening();
+
+    const isRight = Number(currentInput) === currentAnswer;
+    if (isRight) {
+      correct++; streak++;
+      // Счётчик серии для награды — тоже растёт
+      streakSinceReward++;
+
+      feedbackEl.textContent = '✅ ВЕРНО!';
+      feedbackEl.className = 'feedback correct';
+      speak('Верно!');
+      hideTimer = setTimeout(() => hideExample(), 1200);
+
+      // Проверяем, не накопилась ли новая награда (10, 20, 30 ... подряд)
+      if (streakSinceReward >= 10) {
+        // Пора выдать следующую награду
+        if (geeseEarned < MAX_REWARDS) {
+          geeseEarned++;
+          updateRewards();
+          showGoose(geeseEarned - 1, streakSinceReward);
+          // Сбрасываем счётчик — для следующей награды снова 10 подряд
+          streakSinceReward = 0;
+        } else {
+          // Все награды уже есть — просто обновляем последний слот
+          geeseEarned = MAX_REWARDS;
+          updateRewards();
+          showGoose(MAX_REWARDS - 1, streakSinceReward);
+          streakSinceReward = 0;
+        }
+      }
+    } else {
+      wrong++;
+      // Ошибка: сбрасываем серию (и общую, и для награды)
+      streak = 0;
+      streakSinceReward = 0;
+      // НО заработанные награды (geeseEarned) НЕ сбрасываются!
+      updateRewards();
+
+      feedbackEl.textContent = `❌ ОТВЕТ: ${currentAnswer}`;
+      feedbackEl.className = 'feedback wrong';
+      speak('Неправильный ответ');
+      if (currentMode === 'oral' || currentAnswer >= 100) {
+        hintEl.textContent = '💡 Сначала реши без нулей, потом добавь нули';
+      }
+    }
+    renderExample();
+
+    correctCountEl.textContent = correct;
+    wrongCountEl.textContent   = wrong;
+    streakCountEl.textContent  = streak;
+
+    nextTimer = setTimeout(newExample, 2400);
+  }
+
+  // ==== События ====
+  speakerBtn.addEventListener('click', speakExample);
+
+  resetBtn.addEventListener('click', () => {
+    correct = wrong = streak = 0;
+    streakSinceReward = 0;
+    // geeseEarned НЕ сбрасываем — награды остаются
+    correctCountEl.textContent = 0;
+    wrongCountEl.textContent   = 0;
+    streakCountEl.textContent  = 0;
+    hideGoose();
+    updateRewards();
+    newExample();
+  });
+
+  settingsBtn.addEventListener('click', () => overlay.classList.add('open'));
+  closeSettings.addEventListener('click', () => overlay.classList.remove('open'));
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+
+  // ==== Запуск ====
+  buildTableButtons();
+  buildRewardsBar();
+  updateRewards();
+
+  document.body.addEventListener('click', function firstClick() {
+    loadVoices();
+    document.body.removeEventListener('click', firstClick);
+  }, { once: true });
+
+  newExample();
+</script>
+</body>
+</html>
